@@ -1,0 +1,96 @@
+\documentclass[11pt]{article}
+
+\usepackage{blindtext}
+\usepackage{fancyhdr}
+\usepackage{extramarks}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{tikz}
+\usetikzlibrary{automata,  positioning}
+\usepackage{relsize}
+\usepackage{cancel}
+\usepackage{pgfplots}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{xcolor, colortbl}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage[bottom]{footmisc}
+
+\topmargin=-0.8in
+\evensidemargin=0in
+\oddsidemargin=0in
+\textwidth=6.5in
+\textheight=9.0in
+\headsep=0.25in
+\linespread{1.0}
+\pagestyle{fancy}
+
+\tikzstyle{state}=[circle, draw, inner sep=3pt, minimum size=5pt]
+\newcommand{\state}{\node[state]}
+
+\tikzstyle{nodez}=[circle, draw, inner sep=0pt, minimum size=1pt]
+\newcommand{\nodez}{\node[nodez]}
+
+\title{IE3087; Network Optimization; HW1\thanks{Instructor: Dr. Oleg Prokopyev}}
+\author{Luca Wrabetz\thanks{PittID Number: 4444255}}
+
+\theoremstyle{instance}
+\newtheorem{instance}{Instance: }
+
+\theoremstyle{question}
+\newtheorem{question}{Question: }
+
+\theoremstyle{theorem}
+\newtheorem{theorem}{Theorem}
+
+\theoremstyle{theorem}
+\newtheorem{result}{Result}
+\theoremstyle{theorem}
+\newtheorem{proposition}{Proposition}
+
+\begin{document}
+\maketitle
+    \section*{Introduction}
+    In this report I summarize the findings for an implementation of the Minimum Ratio Spanning Tree (MRST) problem. The problem is a natural extension of the minimum spanning tree (MST) problem with a varied cost structure. Specifically, each edge in the input graph has two values $c_{ij}, \tau_{ij}$. The objective of the problem is to find a spanning tree $T^{*}$ such that $(\sum_{(i,j) \in T^{*}} c_{ij}) / (\sum_{(i,j) \in T^{*}} c_{ij})$ is minimized. The greedy algorithm that works for the classical MST problem (and matroids in general) was shown to be ineffective in returning an optimal solution to MRST \cite{chandrasekaran1977minimal}.
+    
+    \section{Algorithm}
+    
+	% \begin{algorithm}
+	% 	\caption{MinRatioSpanningTree($G$)}
+	% 	\begin{algorithmic}[1]
+	% 		\STATE Input: $G = (V, E)$ (edge-weighted with two values, $c_{ij}, \tau_{ij}$)
+	% 		\STATE $i \leftarrow$ arbitrary vertex
+	% 		\STATE $\bar{S} \leftarrow V \setminus i$
+	% 		\STATE most-vital-arc $\leftarrow (,)$ (empty arc)
+	% 		\STATE value $\leftarrow 0$
+	% 		\WHILE{$\bar{S} \neq \emptyset$}
+	% 			\STATE max $\leftarrow 0$, min $\leftarrow \infty$
+	% 			\STATE max-arc $\leftarrow (,)$, min-arc $\leftarrow (,)$
+	% 			\FORALL{$(i, j)$ outgoing arcs $(i)$}
+	% 				\IF{$c_{ij} >$ max}
+	% 					\STATE max $\leftarrow c_{ij}$, max-arc $\leftarrow (i, j)$
+	% 				\ENDIF
+	% 				\IF{$c_{ij} <$ min}
+	% 					\STATE min $\leftarrow c_{ij}$, min-arc $\leftarrow (i, j)$
+	% 				\ENDIF
+	% 			\ENDFOR
+	% 			\IF{(max - min) $>$ value}
+	% 				\STATE value $\leftarrow$ (max - min)
+	% 				\STATE most-vital-arc $\leftarrow$ max-arc
+	% 			\ENDIF
+	% 			$i \leftarrow j$
+	% 			$\bar{S} \leftarrow \bar{S} \setminus i$
+	% 		\ENDWHILE
+	% 		\RETURN most-vital-arc, value
+	% 	\end{algorithmic}
+	% \end{algorithm}
+
+    \clearpage
+    \bibliographystyle{plain}
+    \bibliography{comphw.bib}	
+\end{document}
