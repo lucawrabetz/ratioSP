@@ -90,7 +90,7 @@ public:
 };
 
 
-void mst_prims(int n, int m, float C, vector<int>& neighbors, vector<float>& h, vector<int>& indexes, MST& t_star) {
+void mst_prims(int n, int m, float C, const vector<int>& neighbors, const vector<int>& indexes, const vector<int>& c) {
     /*
      * Subroutine for finding MST(k)
      * 
@@ -181,7 +181,7 @@ int main(int argc, char* argv[]) {
     vector<int> tau;
     vector<int> indexes;
     vector<float> h;
-    float C;
+    float C; 
     MST t_star = MST();
     std::string line;
     
@@ -194,7 +194,7 @@ int main(int argc, char* argv[]) {
         int v;
         int edge_c;
         int edge_tau; 
-
+        float max_c = 0;
         // cout<<"starting while loop on file"<<endl;
         while (getline(ifile, line)) {
             if (line != "") {
@@ -204,6 +204,9 @@ int main(int argc, char* argv[]) {
                     sscanf(cline, "%d %d %d %d", &u, &v, &edge_c, &edge_tau);
                     vertices[u].update_neighbors(v, edge_c, edge_tau);
                     vertices[v].update_neighbors(u, edge_c, edge_tau);
+                    if (edge_c > max_c) {
+                        max_c = edge_c;
+                    }
                 }
                 else {
                     // first line - assign n and m
@@ -217,15 +220,16 @@ int main(int argc, char* argv[]) {
                 ++counter;
             }
         }
+        C = max_c;
     }
     
     // create contiguous list of edges
     int next_index_start = 0; 
     for (int i = 0; i<n; ++i) {
-        cout<<"i: "<<std::to_string(i)<<", next_index_start: "<<next_index_start<<endl;
         indexes.push_back(next_index_start);
         for (int j = 0; j < vertices[i].neighbors.size(); ++j) {
             neighbors.push_back(vertices[i].neighbors[j]);
+            h.push_back(vertices[i].c[j]); // temporarily use c for h for testing of MST subroutines
             c.push_back(vertices[i].c[j]);
             tau.push_back(vertices[i].tau[j]);
             ++next_index_start;
@@ -247,21 +251,27 @@ int main(int argc, char* argv[]) {
     // }
 
     // uncomment to print graph after being read (by full contiguous list)
-    int start_index;
-    int stop_index;
-    for (int i = 0; i < n; ++i) {
-        cout<<std::to_string(vertices[i].i)<<": neighbors (index, c, tau) - "<<endl; 
-        start_index = indexes[i];
-        stop_index = indexes[i+1];
-        cout << "start index: " << std::to_string(start_index) << ", stop index: " << std::to_string(stop_index)<<endl;
-        for (int j = start_index; j < stop_index; ++j) {
-            cout<<"("<<std::to_string(neighbors[j]);
-            cout<<","<<std::to_string(c[j]);
-            cout<<","<<std::to_string(tau[j])<<")";
-            cout<<endl;
-        }
-    }
-    // mst_prims(n, m, C, &neighbors, &h, &indexes, &t_star)
+    // int start_index;
+    // int stop_index;
+    // for (int i = 0; i < n; ++i) {
+    //     cout<<std::to_string(vertices[i].i)<<": neighbors (index, c, tau) - "<<endl; 
+    //     start_index = indexes[i];
+    //     stop_index = indexes[i+1];
+    //     cout << "start index: " << std::to_string(start_index) << ", stop index: " << std::to_string(stop_index)<<endl;
+    //     for (int j = start_index; j < stop_index; ++j) {
+    //         cout<<"("<<std::to_string(neighbors[j]);
+    //         cout<<","<<std::to_string(c[j]);
+    //         cout<<","<<std::to_string(tau[j])<<")";
+    //         cout<<endl;
+    //     }
+    // }
+
+    const vector<int> final_neighbors = neighbors;
+    const vector<int> final_c = c;
+    const vector<int> final_tau = tau;
+    const vector<int> final_indexes = indexes;
+    
+    mst_prims(n, m, C, final_neighbors, final_indexes, final_c);
 
 
     // float obj = min_ratio_st(n, m, &neighbors, &c, &tau, &indexes)
