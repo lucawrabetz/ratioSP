@@ -2,7 +2,9 @@
 #include <time.h>
 #include <vector>
 #include <fstream>
+#include <sstream>
 #include <queue>
+#include <string>
 
 using std::vector;
 using std::priority_queue;
@@ -56,6 +58,9 @@ class Vertex {
 public:
     int i;
     float d_i;
+    vector<int> neighbors;
+    vector<int> c;
+    vector<int> tau;
 
     Vertex(int _i, float _d_i) {
         i = _i;
@@ -64,6 +69,12 @@ public:
 
     void update_Vertex(float _new_d_i) {
         d_i = _new_d_i;
+    }
+
+    void update_neighbors(int _new_neighbor, int _new_c, int _new_tau) {
+        neighbors.push_back(_new_neighbor);
+        c.push_back(_new_c);
+        tau.push_back(_new_tau);
     }
 
     float getD() const { return d_i; }
@@ -94,7 +105,7 @@ void mst_prims(int n, int m, float C, vector<int>& neighbors, vector<float>& h, 
     // t_star is the MST (indexes of edges as per lists neighbors, h, c, tau)
     // t_star has attributes edges and obj_val
     // other values - , 
-    t_star->clear(); 
+    t_star.clear(); 
     
         
     // initialize heap of vertices 
@@ -133,28 +144,26 @@ float min_ratio_st(int n, int m, vector<int>& neighbors, vector<int>& c, vector<
 }
 
 int main(int argc, char* argv[]) {
+    // cout << "main started" << endl; 
     const clock_t time_0 = clock();
-
-    // const std::string datafile = argv[1];
-    // const std::string outputfile = argv[2];
     
-    int n = 3;
-    int m = 3;
-
-    // test graph G = (V, E)
+    // to use the following test graph G = (V, E) pass 'complete3.graph' as datafile
     // V = {0, 1, 2}
     // E = {(0, 1), (0, 2), (1, 2)}
     // c = tau = 1
-
-    vector<int> neighbors = {1, 2, 0, 2, 0, 1};
-    vector<int> c = {1, 1, 1, 1, 1, 1};
-    vector<int> tau = {1, 1, 1, 1, 1, 1};
-    vector<int> indexes = {0, 2, 4};
-    vector<float> h = {1, 1, 1, 1, 1, 1};
-    float C = 1.0;
-    MST t_star = MST();
-
-    mst_prims(n, m, C, &neighbors, &h, &indexes, &t_star);
+    // when you have args uncomment and use the next two lines
+    // const std::string datafile = argv[1];
+    // const std::string outputfile = argv[2];
+    
+    // to hard code the datafiles
+    const std::string datafile = "complete3.graph";
+    const std::string outputfile = "output.txt";
+    
+    // initialize file objects
+    std::ifstream ifile (datafile);
+    std::ofstream ofile (outputfile);
+    vector<Vertex> vertices; // maintain a vector of vertices at all times - first to construct contiguous neighbor list, then for reference in heap creation
+    // cout << "vertex vector created" << endl; 
 
     // read graph file 
     // assign n,m
@@ -163,6 +172,97 @@ int main(int argc, char* argv[]) {
     // c (size 2m)
     // tau (size 2m)
     // use vector indexes (size n) to store index starts for neighbor of node i
+
+    int n;
+    int m;
+
+    vector<int> neighbors;
+    vector<int> c;
+    vector<int> tau;
+    vector<int> indexes;
+    vector<float> h;
+    float C;
+    MST t_star = MST();
+    std::string line;
+    
+    // cout<<"all other vectors and info created"<<endl;
+
+    if (ifile.is_open()) {
+        int counter = 1;
+        const char* cline;
+        int u;
+        int v;
+        int edge_c;
+        int edge_tau; 
+
+        // cout<<"starting while loop on file"<<endl;
+        while (getline(ifile, line)) {
+            if (line != "") {
+                if (counter > 1) {
+                    // not first line - handle a new edge
+                    cline = line.c_str();
+                    sscanf(cline, "%d %d %d %d", &u, &v, &edge_c, &edge_tau);
+                    vertices[u].update_neighbors(v, edge_c, edge_tau);
+                    vertices[v].update_neighbors(u, edge_c, edge_tau);
+                }
+                else {
+                    // first line - assign n and m
+                    cline = line.c_str();
+                    sscanf(cline, "%d %d", &n, &m);
+                    // create all vertex objects
+                    for (int i = 0; i < n; ++i){
+                        vertices.push_back(Vertex(i, 0));
+                    }
+                }
+                ++counter;
+            }
+        }
+    }
+    
+    // create contiguous list of edges
+    int next_index_start = 0; 
+    for (int i = 0; i<n; ++i) {
+        cout<<"i: "<<std::to_string(i)<<", next_index_start: "<<next_index_start<<endl;
+        indexes.push_back(next_index_start);
+        for (int j = 0; j < vertices[i].neighbors.size(); ++j) {
+            neighbors.push_back(vertices[i].neighbors[j]);
+            c.push_back(vertices[i].c[j]);
+            tau.push_back(vertices[i].tau[j]);
+            ++next_index_start;
+        }
+    }
+    // add an n+1th value to indexes - so the nth vertex has a 'stop value'
+    indexes.push_back(2*m);
+    
+    
+    // uncomment to print graph after being read (by vertex objects)
+    // for (int i = 0; i < n; ++i) {
+    //     cout<<std::to_string(vertices[i].i)<<": neighbors (index, c, tau) - "<<endl; 
+    //     for (int j = 0; j < vertices[i].neighbors.size(); ++j) {
+    //         cout<<"("<<std::to_string(vertices[i].neighbors[j]);
+    //         cout<<","<<std::to_string(vertices[i].c[j]);
+    //         cout<<","<<std::to_string(vertices[i].tau[j])<<")";
+    //         cout<<endl;
+    //     }
+    // }
+
+    // uncomment to print graph after being read (by full contiguous list)
+    int start_index;
+    int stop_index;
+    for (int i = 0; i < n; ++i) {
+        cout<<std::to_string(vertices[i].i)<<": neighbors (index, c, tau) - "<<endl; 
+        start_index = indexes[i];
+        stop_index = indexes[i+1];
+        cout << "start index: " << std::to_string(start_index) << ", stop index: " << std::to_string(stop_index)<<endl;
+        for (int j = start_index; j < stop_index; ++j) {
+            cout<<"("<<std::to_string(neighbors[j]);
+            cout<<","<<std::to_string(c[j]);
+            cout<<","<<std::to_string(tau[j])<<")";
+            cout<<endl;
+        }
+    }
+    // mst_prims(n, m, C, &neighbors, &h, &indexes, &t_star)
+
 
     // float obj = min_ratio_st(n, m, &neighbors, &c, &tau, &indexes)
 
