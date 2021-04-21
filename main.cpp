@@ -90,7 +90,7 @@ public:
 };
 
 
-void mst_prims(int n, int m, float C, const vector<int>& neighbors, const vector<int>& indexes, const vector<int>& c) {
+void mst_prims(int n, int m, float C, const vector<int>& neighbors, const vector<int>& indexes, const vector<int>& c, MST* t_star) {
     /*
      * Subroutine for finding MST(k)
      * 
@@ -105,37 +105,81 @@ void mst_prims(int n, int m, float C, const vector<int>& neighbors, const vector
     // t_star is the MST (indexes of edges as per lists neighbors, h, c, tau)
     // t_star has attributes edges and obj_val
     // other values - , 
-    t_star.clear(); 
+    t_star->clear(); 
     
         
     // initialize heap of vertices 
     // node 0 has d(0) = 0
     // everyone else has d(j) = C,
     priority_queue <Vertex, vector<Vertex>, Comparator> heap;
+    vector<int> pred; // vector of predecessors
+    vector<bool> S; // who is already in the tree? (nodes)
+    int temp_index; // to hold the vertex index
+    float temp_dval; // to hold the distance label
+    int start_index; // to hold the index to start looping through in edge list
+    int stop_index; // to hold the index to stop looping through in edge list
 
-    for (int i = 0; i < n; i++) {
-        if (i == 0) {
-            heap.push(Vertex(i, 0));
-        }
-        else {
-            heap.push(Vertex(i, C));
-        }
-    }
-    
+    int min_edge_index; // for the index of the minimum edge to be added to t_star
+    float min_edge_cost; // for the cost of the minimum edge to be added to t_star
+
+    for (int i = 1; i < n; ++i) {
+        pred.push_back(-1);
+        S.push_back(false);
+    }       
+
+    start_index = indexes[0]; 
+    stop_index = indexes[1];
+
+    for (int j = start_index; j < stop_index; ++j) {
+        // push neighbors of node 0 to heap with distance label c_0j and set their pred = 0
+        heap.push(Vertex(neighbors[j], c[j])); // add node 0 to heap 
+        pred[neighbors[j]] = 0;
+    }    
+
+    // set S[0] to true - consider node 0 in the tree 
+    S[0] = true; 
+
+    /* use this loop to test that the heap is initializing correctly 
     float d_val;
-
     while (!heap.empty()) {
         d_val = heap.top().d_i;
         cout << d_val << endl;
         heap.pop();
     }
+    */
 
-    
     // main loop
     // invariant - while T^{*} is not of size n-1 
     
-    //while (t_star->edges.size() < n-1) {
-    //}
+    while (t_star->edges.size() < n-1) {
+        // get the vertex with next lowest d_{i} from the heap, and delete from the heap
+        temp_index = heap.top().i; 
+        temp_dval = heap.top().d_i;
+        heap.pop();
+
+        start_index = indexes[temp_index];
+        stop_index = indexes[temp_index+1];
+
+        for (int e = start_index; e < stop_index; ++e) {
+            if (!S[neighbors[e]]) {
+                // if the neighbor is not already in S, push neighbor of node to heap with distance label c and set their pred
+                heap.push(Vertex(neighbors[e], c[e])); // add node 0 to heap 
+                pred[neighbors[e]] = temp_index;
+            }
+            if (neighbors[e] == pred[temp_index]) {
+                // set the index of the edge we are adding to e - this way we can keep track of it t_star by edge index and not as a tuple
+                min_edge_index = e;
+                min_edge_cost = c[e];
+            }
+        }
+        
+        t_star->add_edge(min_edge_index);
+        t_star->set_objective(t_star->obj_val + min_edge_cost);
+        // update the heap d_i values of each neighbor - !!!! we will re-add these neighbors 
+        // since priority_queue has no decrease_key implementation, so we will have duplicates
+        // but the ones with d = C+1 will not get popped so its fine
+        
+    }
     
     return;
 }
@@ -182,7 +226,6 @@ int main(int argc, char* argv[]) {
     vector<int> indexes;
     vector<float> h;
     float C; 
-    MST t_star = MST();
     std::string line;
     
     // cout<<"all other vectors and info created"<<endl;
@@ -239,7 +282,7 @@ int main(int argc, char* argv[]) {
     indexes.push_back(2*m);
     
     
-    // uncomment to print graph after being read (by vertex objects)
+    /* uncomment to print graph after being read (by vertex objects)
     // for (int i = 0; i < n; ++i) {
     //     cout<<std::to_string(vertices[i].i)<<": neighbors (index, c, tau) - "<<endl; 
     //     for (int j = 0; j < vertices[i].neighbors.size(); ++j) {
@@ -249,30 +292,36 @@ int main(int argc, char* argv[]) {
     //         cout<<endl;
     //     }
     // }
+    */
 
     // uncomment to print graph after being read (by full contiguous list)
-    // int start_index;
-    // int stop_index;
-    // for (int i = 0; i < n; ++i) {
-    //     cout<<std::to_string(vertices[i].i)<<": neighbors (index, c, tau) - "<<endl; 
-    //     start_index = indexes[i];
-    //     stop_index = indexes[i+1];
-    //     cout << "start index: " << std::to_string(start_index) << ", stop index: " << std::to_string(stop_index)<<endl;
-    //     for (int j = start_index; j < stop_index; ++j) {
-    //         cout<<"("<<std::to_string(neighbors[j]);
-    //         cout<<","<<std::to_string(c[j]);
-    //         cout<<","<<std::to_string(tau[j])<<")";
-    //         cout<<endl;
-    //     }
-    // }
+    int start_index;
+    int stop_index;
+    for (int i = 0; i < n; ++i) {
+        cout<<std::to_string(vertices[i].i)<<": neighbors (index, c, tau) - "<<endl; 
+        start_index = indexes[i];
+        stop_index = indexes[i+1];
+        cout << "start index: " << std::to_string(start_index) << ", stop index: " << std::to_string(stop_index)<<endl;
+        for (int j = start_index; j < stop_index; ++j) {
+            cout<<"("<<std::to_string(neighbors[j]);
+            cout<<","<<std::to_string(c[j]);
+            cout<<","<<std::to_string(tau[j])<<")";
+            cout<<endl;
+        }
+    }
 
     const vector<int> final_neighbors = neighbors;
     const vector<int> final_c = c;
     const vector<int> final_tau = tau;
     const vector<int> final_indexes = indexes;
+    MST* t_star = new MST();
     
-    mst_prims(n, m, C, final_neighbors, final_indexes, final_c);
-
+    mst_prims(n, m, C, final_neighbors, final_indexes, final_c, t_star);
+    
+    cout<<"prims obj: "<<t_star->obj_val<<endl;
+    for (int i = 0; i < n-1; ++i) {
+        cout<<t_star->edges[i]<<endl;
+    }
 
     // float obj = min_ratio_st(n, m, &neighbors, &c, &tau, &indexes)
 
