@@ -48,6 +48,10 @@ public:
         j = _j;
         H = _H;
     }
+    
+    float getH() const {
+        return H;
+    }
 
     void update_Edge(float _new_H) {
         H = _new_H;
@@ -89,16 +93,119 @@ public:
     }
 };
 
+class EdgeComparator
+{
+public:
+    float operator() (const Edge& e1, const Edge& e2)
+    {
+        return e1.getH() > e2.getH();
+    }
+};
+
+//void mst_kruskal(int n, int m, float C, const vector<int>& neighbors, const vector<int>& indexes, const vector<int>& c, MST* t_star) {
+//    /*
+//     * Subroutine for finding MST(k) - kruskals
+//     * 
+//     * Receive current graph topology and costs 
+//     * Receive MST address to update
+//     * Initialize --> heap of edges and costs, and the bool vector of whos in the tree already (nodes)  
+//     * While T^{*}.edges is not has size less than n-1, pop next edge, check for cycle, add edge 
+//     * Updates the MST struct T^{*} without returning anything 
+//     */
+//    
+//    // pre initialization
+//    // t_star is the MST (indexes of edges as per lists neighbors, h, c, tau)
+//    // t_star has attributes edges and obj_val
+//    // other values - , 
+//    t_star->clear(); 
+//    
+//        
+//    // initialize heap of edges 
+//    priority_queue <Edge, vector<Edge>, EdgeComparator> heap;
+//    //vector<int> pred; // vector of predecessors
+//    vector<bool> S; // who is already in the tree? (nodes)
+//    int temp_index; // to hold the vertex index
+//    float temp_dval; // to hold the distance label
+//    int start_index; // to hold the index to start looping through in edge list
+//    int stop_index; // to hold the index to stop looping through in edge list
+//
+//    int min_edge_index; // for the index of the minimum edge to be added to t_star
+//    float min_edge_cost; // for the cost of the minimum edge to be added to t_star
+//
+//    for (int i = 0; i < n; ++i) {
+//        S.push_back(false);
+//    }       
+//
+//    for (int e = 0; e < m; ++e) {
+//    }
+//
+//    start_index = indexes[0]; 
+//    stop_index = indexes[1];
+//
+//    for (int j = start_index; j < stop_index; ++j) {
+//        // push neighbors of node 0 to heap with distance label c_0j and set their pred = 0
+//        heap.push(Vertex(neighbors[j], c[j])); // add node 0 to heap 
+//        pred[neighbors[j]] = 0;
+//    }    
+//
+//    // set S[0] to true - consider node 0 in the tree 
+//    S[0] = true; 
+//
+//    /* use this loop to test that the heap is initializing correctly 
+//    float d_val;
+//    while (!heap.empty()) {
+//        d_val = heap.top().d_i;
+//        cout << d_val << endl;
+//        heap.pop();
+//    }
+//    */
+//
+//    // main loop
+//    // invariant - while T^{*} is not of size n-1 
+//    
+//    while (t_star->edges.size() < n-1) {
+//        // get the vertex with next lowest d_{i} from the heap, and delete from the heap
+//        temp_index = heap.top().i; 
+//        temp_dval = heap.top().d_i;
+//        heap.pop();
+//
+//        start_index = indexes[temp_index];
+//        stop_index = indexes[temp_index+1];
+//
+//        for (int e = start_index; e < stop_index; ++e) {
+//            if (!S[neighbors[e]]) {
+//                // if the neighbor is not already in S, push neighbor of node to heap with distance label c and set their pred
+//                heap.push(Vertex(neighbors[e], c[e])); // add node 0 to heap 
+//                pred[neighbors[e]] = temp_index;
+//            }
+//            if (neighbors[e] == pred[temp_index]) {
+//                // set the index of the edge we are adding to e - this way we can keep track of it t_star by edge index and not as a tuple
+//                min_edge_index = e;
+//                min_edge_cost = c[e];
+//            }
+//        }
+//        
+//        t_star->add_edge(min_edge_index);
+//        t_star->set_objective(t_star->obj_val + min_edge_cost);
+//        // update the heap d_i values of each neighbor - !!!! we will re-add these neighbors 
+//        // since priority_queue has no decrease_key implementation, so we will have duplicates
+//        // but the ones with d = C+1 will not get popped so its fine
+//        
+//    }
+//    
+//    return;
+//}
+
 
 void mst_prims(int n, int m, float C, const vector<int>& neighbors, const vector<int>& indexes, const vector<int>& c, MST* t_star) {
     /*
-     * Subroutine for finding MST(k)
+     * Subroutine for finding MST(k) - prims
      * 
      * Receive current graph topology and costs 
      * Receive MST address to update
-     * Initialize --> heap, distance labels, pred, T^{*} (empty)
+     * Initialize --> heap of nodes and distance labels, pred, clear T^{*} 
      * While T^{*}.edges is not has size less than n-1, pop next node, update heap for adjacent 
-     * Returns T^{*} as a tree struct 
+     * Updates T^{*}, doesn't return anything
      */
     
     // pre initialization
@@ -122,7 +229,7 @@ void mst_prims(int n, int m, float C, const vector<int>& neighbors, const vector
     int min_edge_index; // for the index of the minimum edge to be added to t_star
     float min_edge_cost; // for the cost of the minimum edge to be added to t_star
 
-    for (int i = 1; i < n; ++i) {
+    for (int i = 0; i < n; ++i) {
         pred.push_back(-1);
         S.push_back(false);
     }       
@@ -139,14 +246,14 @@ void mst_prims(int n, int m, float C, const vector<int>& neighbors, const vector
     // set S[0] to true - consider node 0 in the tree 
     S[0] = true; 
 
-    /* use this loop to test that the heap is initializing correctly 
-    float d_val;
-    while (!heap.empty()) {
-        d_val = heap.top().d_i;
-        cout << d_val << endl;
-        heap.pop();
-    }
-    */
+    //use this loop to test that the heap is initializing correctly 
+    //float d_val;
+    //while (!heap.empty()) {
+    //    d_val = heap.top().d_i;
+    //    cout << d_val << endl;
+    //    heap.pop();
+    //}
+    
 
     // main loop
     // invariant - while T^{*} is not of size n-1 
@@ -163,8 +270,10 @@ void mst_prims(int n, int m, float C, const vector<int>& neighbors, const vector
         for (int e = start_index; e < stop_index; ++e) {
             if (!S[neighbors[e]]) {
                 // if the neighbor is not already in S, push neighbor of node to heap with distance label c and set their pred
-                heap.push(Vertex(neighbors[e], c[e])); // add node 0 to heap 
+                heap.push(Vertex(neighbors[e], c[e])); // add node to heap 
                 pred[neighbors[e]] = temp_index;
+                // THIS IS WHERE THE ISSUE IS RIGHT NOW, WE DON'T ALWAYS WANT TO CHANGE PRED, BUT WE CAN'T CHECK THE HEAP VALUE
+                // NEED ANOTHER "COPY" OF THE HEAP THAT IS ORDERED BY VERTEX WITH CURRENT "BEST" VALUE IN THE HEAP
             }
             if (neighbors[e] == pred[temp_index]) {
                 // set the index of the edge we are adding to e - this way we can keep track of it t_star by edge index and not as a tuple
@@ -175,10 +284,10 @@ void mst_prims(int n, int m, float C, const vector<int>& neighbors, const vector
         
         t_star->add_edge(min_edge_index);
         t_star->set_objective(t_star->obj_val + min_edge_cost);
+        S[temp_index] = true;
         // update the heap d_i values of each neighbor - !!!! we will re-add these neighbors 
         // since priority_queue has no decrease_key implementation, so we will have duplicates
         // but the ones with d = C+1 will not get popped so its fine
-        
     }
     
     return;
@@ -200,7 +309,7 @@ int main(int argc, char* argv[]) {
     // const std::string outputfile = argv[2];
     
     // to hard code the datafiles
-    const std::string datafile = "complete3.graph";
+    const std::string datafile = "complete4.graph";
     const std::string outputfile = "output.txt";
     
     // initialize file objects
@@ -303,7 +412,7 @@ int main(int argc, char* argv[]) {
         stop_index = indexes[i+1];
         cout << "start index: " << std::to_string(start_index) << ", stop index: " << std::to_string(stop_index)<<endl;
         for (int j = start_index; j < stop_index; ++j) {
-            cout<<"("<<std::to_string(neighbors[j]);
+            cout<<j<<": ("<<std::to_string(neighbors[j]);
             cout<<","<<std::to_string(c[j]);
             cout<<","<<std::to_string(tau[j])<<")";
             cout<<endl;
