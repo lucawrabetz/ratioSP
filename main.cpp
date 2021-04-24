@@ -282,8 +282,6 @@ void mst_prims(int n, int m, float C, const vector<int>& neighbors, const vector
                     pred[neighbors[e]] = temp_index;
                     best_ds[neighbors[e]] = c[e];
                 }
-                // THIS IS WHERE THE ISSUE IS RIGHT NOW, WE DON'T ALWAYS WANT TO CHANGE PRED, BUT WE CAN'T CHECK THE HEAP VALUE
-                // NEED ANOTHER "COPY" OF THE HEAP THAT IS ORDERED BY VERTEX WITH CURRENT "BEST" VALUE IN THE HEAP
             }
             if (neighbors[e] == pred[temp_index]) {
                 // set the index of the edge we are adding to e - this way we can keep track of it t_star by edge index and not as a tuple
