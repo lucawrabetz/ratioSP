@@ -221,6 +221,10 @@ void mst_prims(int n, int m, float C, const vector<int>& neighbors, const vector
     priority_queue <Vertex, vector<Vertex>, Comparator> heap;
     vector<int> pred; // vector of predecessors
     vector<bool> S; // who is already in the tree? (nodes)
+    vector<float> best_ds; // keep basically a copy of the heap with the current 
+    // (continued from above) distance label for every node
+    // we need it because we don't decrease_key, we just add copies, 
+    // and we need to be able to check the current values of things in the heap for the algo
     int temp_index; // to hold the vertex index
     float temp_dval; // to hold the distance label
     int start_index; // to hold the index to start looping through in edge list
@@ -232,6 +236,7 @@ void mst_prims(int n, int m, float C, const vector<int>& neighbors, const vector
     for (int i = 0; i < n; ++i) {
         pred.push_back(-1);
         S.push_back(false);
+        best_ds.push_back(C+1);
     }       
 
     start_index = indexes[0]; 
@@ -240,6 +245,7 @@ void mst_prims(int n, int m, float C, const vector<int>& neighbors, const vector
     for (int j = start_index; j < stop_index; ++j) {
         // push neighbors of node 0 to heap with distance label c_0j and set their pred = 0
         heap.push(Vertex(neighbors[j], c[j])); // add node 0 to heap 
+        best_ds[neighbors[j]] = c[j];
         pred[neighbors[j]] = 0;
     }    
 
@@ -271,7 +277,11 @@ void mst_prims(int n, int m, float C, const vector<int>& neighbors, const vector
             if (!S[neighbors[e]]) {
                 // if the neighbor is not already in S, push neighbor of node to heap with distance label c and set their pred
                 heap.push(Vertex(neighbors[e], c[e])); // add node to heap 
-                pred[neighbors[e]] = temp_index;
+                if (best_ds[neighbors[e]]>c[e]) {
+                    // we only change the pred for this guy if this edge is his best edge! he may have a better edge from a previously set predecessor
+                    pred[neighbors[e]] = temp_index;
+                    best_ds[neighbors[e]] = c[e];
+                }
                 // THIS IS WHERE THE ISSUE IS RIGHT NOW, WE DON'T ALWAYS WANT TO CHANGE PRED, BUT WE CAN'T CHECK THE HEAP VALUE
                 // NEED ANOTHER "COPY" OF THE HEAP THAT IS ORDERED BY VERTEX WITH CURRENT "BEST" VALUE IN THE HEAP
             }
