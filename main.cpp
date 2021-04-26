@@ -1,16 +1,20 @@
+#include <algorithm>
 #include <iostream>
 #include <time.h>
 #include <vector>
+#include <set>
 #include <fstream>
 #include <sstream>
 #include <queue>
 #include <string>
 
+using std::set;
 using std::vector;
 using std::priority_queue;
 using std::cout;
 using std::cin;
 using std::endl;
+using std::sort;
 
 struct MST {
 public:
@@ -101,6 +105,7 @@ public:
         return e1.getH() > e2.getH();
     }
 };
+
 
 //void mst_kruskal(int n, int m, float C, const vector<int>& neighbors, const vector<int>& indexes, const vector<int>& c, MST* t_star) {
 //    /*
@@ -301,7 +306,95 @@ void mst_prims(int n, int m, float C, const vector<int>& neighbors, const vector
     return;
 }
 
-float min_ratio_st(int n, int m, vector<int>& neighbors, vector<int>& c, vector<int>& tau, vector<int>& indexes){
+vector<float> get_k_ratios(int m, const vector<int>& c, const vector<int>& tau){
+    // compute and sort ratios ce-cf/de-df for each pair of edges
+    // receive vector of edge costs (indexed e = 1-m) c and tau
+    //
+    vector<float> k_ratios;
+    float k_ratio;
+    // TODO : check for duplicates and correct index at insertion
+    for (int e = 0; e < m-1; ++e) {
+        for (int f = e+1; f < m; ++f) {
+            if (tau[e]-tau[f] == 0) {
+                continue;
+            }
+            k_ratio = (c[e]-c[f])/(tau[e]-tau[f]);
+            k_ratios.push_back(k_ratio);
+        }
+    }
+    set<int> s;
+    unsigned size = k_ratios.size();
+    for( unsigned i = 0; i < size; ++i ) s.insert( k_ratios[i] );
+    k_ratios.assign( s.begin(), s.end() );
+    sort(k_ratios.begin(), k_ratios.end()); 
+    return k_ratios;
+}
+
+float eval_tree(float k_ratio, const vector<int>& c, const vector<int>& tau, MST* tree) {
+    /*
+     * Return the objective value of the tree object on the parametrized H(k) problem
+     */
+
+    vector<int> edges = tree->edges;
+    float h_curr;
+    float h_tot = 0;
+    for (int i = 0; i < edges.size(); ++i) {
+        h_curr = c[edges[i]] - k_ratio*tau[edges[i]];
+        h_tot += h_curr;
+    }
+    return h_tot;
+}
+
+float eval_tree_nonparam(const vector<int>& c, const vector<int>& tau, MST* tree) {
+    /*
+     * Return the objective value of the tree object on the parametrized H(k) problem
+     */
+    float obj; 
+    int c_tot = 0;
+    int tau_tot = 0;
+    vector<int> edges = tree->edges;
+    for (int i = 0; i < edges.size(); ++i) {
+        c_tot += c[edges[i]];
+        tau_tot += tau[edges[i]];
+    }
+    obj = c_tot / tau_tot;
+    return obj;
+}
+
+float min_ratio_st(int n, int m, const vector<int>& c_raw, const vector<int>& tau_raw, const vector<int>& raw_indexes, const vector<int>& neighbors, const vector<int>& c, const vector<int>& tau, const vector<int>& indexes){
+    /*
+     * Subroutine for finding MRST 
+     * Receive current graph topology and costs 
+     * Initialize -->  
+     * Anything with a _t is updated every iteration
+     */
+    
+    // initialize, as of right now 
+    //
+    int t;
+    float k_t;
+    int alpha_t;
+    int beta_t;
+    float obj_val = 0;
+    
+    float A_val;
+    float B_val;
+    vector<float> k_vals = get_k_ratios(m, c_raw, tau_raw); 
+    int r = k_vals.size();
+    
+    // log k_ratios
+    // cout<< "k ratios: " << endl;
+    // for (int i = 0; i < r; ++i){
+    //     cout<< k_vals[i] << endl;
+    // }
+
+    bool optimal = false;
+
+    while (!optimal) {
+        optimal = true;
+    }
+
+    return obj_val;
 }
 
 int main(int argc, char* argv[]) {
@@ -317,7 +410,7 @@ int main(int argc, char* argv[]) {
     // const std::string outputfile = argv[2];
     
     // to hard code the datafiles
-    const std::string datafile = "complete4.graph";
+    const std::string datafile = "example.graph";
     const std::string outputfile = "output.txt";
     
     // initialize file objects
@@ -338,9 +431,12 @@ int main(int argc, char* argv[]) {
     int m;
 
     vector<int> neighbors;
+    vector<int> c_raw;
+    vector<int> tau_raw;
     vector<int> c;
     vector<int> tau;
     vector<int> indexes;
+    vector<int> raw_indexes;
     vector<float> h;
     float C; 
     std::string line;
@@ -364,6 +460,9 @@ int main(int argc, char* argv[]) {
                     sscanf(cline, "%d %d %d %d", &u, &v, &edge_c, &edge_tau);
                     vertices[u].update_neighbors(v, edge_c, edge_tau);
                     vertices[v].update_neighbors(u, edge_c, edge_tau);
+                    c_raw.push_back(edge_c);
+                    tau_raw.push_back(edge_tau);
+                    raw_indexes.push_back(counter-2);
                     if (edge_c > max_c) {
                         max_c = edge_c;
                     }
@@ -427,20 +526,25 @@ int main(int argc, char* argv[]) {
         }
     }
 
+
     const vector<int> final_neighbors = neighbors;
     const vector<int> final_c = c;
     const vector<int> final_tau = tau;
+    const vector<int> final_c_raw = c_raw;
+    const vector<int> final_tau_raw = tau_raw;
+    const vector<int> final_raw_indexes = raw_indexes;
     const vector<int> final_indexes = indexes;
     MST* t_star = new MST();
     
-    mst_prims(n, m, C, final_neighbors, final_indexes, final_c, t_star);
-    
-    cout<<"prims obj: "<<t_star->obj_val<<endl;
-    for (int i = 0; i < n-1; ++i) {
-        cout<<t_star->edges[i]<<endl;
-    }
 
-    // float obj = min_ratio_st(n, m, &neighbors, &c, &tau, &indexes)
+    float obj_val = min_ratio_st(n, m, final_c_raw, final_tau_raw, final_raw_indexes, final_neighbors, final_c,  final_tau, final_indexes);
+    // mst_prims(n, m, C, final_neighbors, final_indexes, final_c, t_star);
+    //cout<<"prims obj: "<<t_star->obj_val<<endl;
+    //for (int i = 0; i < n-1; ++i) {
+    //    cout<<t_star->edges[i]<<endl;
+    //}
+
+
 
     float run_time = float(clock() - time_0) / CLOCKS_PER_SEC;
 
