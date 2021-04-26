@@ -7,6 +7,7 @@
 #include <sstream>
 #include <queue>
 #include <string>
+#include <cmath>
 
 using std::set;
 using std::vector;
@@ -15,6 +16,7 @@ using std::cout;
 using std::cin;
 using std::endl;
 using std::sort;
+using std::floor;
 
 struct MST {
 public:
@@ -202,7 +204,7 @@ public:
 //}
 
 
-void mst_prims(int n, int m, float C, const vector<int>& neighbors, const vector<int>& indexes, const vector<int>& c, MST* t_star) {
+void mst_prims(int n, int m, float C, const vector<int>& neighbors, const vector<int>& indexes, const vector<float>& c, MST* t_star) {
     /*
      * Subroutine for finding MST(k) - prims
      * 
@@ -361,7 +363,7 @@ float eval_tree_nonparam(const vector<int>& c, const vector<int>& tau, MST* tree
     return obj;
 }
 
-float min_ratio_st(int n, int m, const vector<int>& c_raw, const vector<int>& tau_raw, const vector<int>& raw_indexes, const vector<int>& neighbors, const vector<int>& c, const vector<int>& tau, const vector<int>& indexes){
+float min_ratio_st(int n, int m, float C, const vector<int>& c_raw, const vector<int>& tau_raw, const vector<int>& raw_indexes, const vector<int>& neighbors, const vector<int>& c, const vector<int>& tau, const vector<int>& indexes, MST* tree){
     /*
      * Subroutine for finding MRST 
      * Receive current graph topology and costs 
@@ -369,19 +371,21 @@ float min_ratio_st(int n, int m, const vector<int>& c_raw, const vector<int>& ta
      * Anything with a _t is updated every iteration
      */
     
-    // initialize, as of right now 
-    //
-    int t;
+    // initialize 
+    int t = 0;
     float k_t;
-    int alpha_t;
-    int beta_t;
     float obj_val = 0;
     
     float A_val;
     float B_val;
     vector<float> k_vals = get_k_ratios(m, c_raw, tau_raw); 
     int r = k_vals.size();
-    
+    int alpha_t = 0;
+    int beta_t = r;
+    int j_index = 0;
+    vector<float> h;
+    h.reserve(c.size());
+
     // log k_ratios
     // cout<< "k ratios: " << endl;
     // for (int i = 0; i < r; ++i){
@@ -391,6 +395,20 @@ float min_ratio_st(int n, int m, const vector<int>& c_raw, const vector<int>& ta
     bool optimal = false;
 
     while (!optimal) {
+        // set j index and k_t 
+        j_index = floor((alpha_t+beta_t)/2);
+        k_t = (k_vals[j_index]+k_vals[j_index+1])/2;
+
+        // set the h_vector
+        for (int e = 0; e < c.size(); ++e) {
+            h[e] = c[e] - k_t * tau[e];
+        }
+
+        // resolve the tree object on this h function
+        mst_prims(n, m, C, neighbors, indexes, h, tree);
+
+        // calculate A_val and B_val to update everything
+
         optimal = true;
     }
 
@@ -405,12 +423,7 @@ int main(int argc, char* argv[]) {
     // V = {0, 1, 2}
     // E = {(0, 1), (0, 2), (1, 2)}
     // c = tau = 1
-    // when you have args uncomment and use the next two lines
-    // const std::string datafile = argv[1];
-    // const std::string outputfile = argv[2];
-    
-    // to hard code the datafiles
-    const std::string datafile = "example.graph";
+    // when you have args uncomment and use the next two lines const std::string datafile = argv[1]; const std::string outputfile = argv[2]; to hard code the datafiles const std::string datafile = "example.graph";
     const std::string outputfile = "output.txt";
     
     // initialize file objects
