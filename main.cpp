@@ -204,7 +204,7 @@ public:
 //}
 
 
-void mst_prims(int n, int m, float C, const vector<int>& neighbors, const vector<int>& indexes, const vector<float>& c, MST* t_star) {
+void mst_prims(int n, int m, float C, const vector<int>& neighbors, const vector<int>& indexes, vector<float> c, MST* t_star) {
     /*
      * Subroutine for finding MST(k) - prims
      * 
@@ -221,7 +221,12 @@ void mst_prims(int n, int m, float C, const vector<int>& neighbors, const vector
     // other values - , 
     t_star->clear(); 
     
-        
+    cout<<"prim's beginning... "<<endl;   
+    cout<<"prims costs (hk) (index, cost):";
+    for (int e = 0; e < c.size(); ++e){
+        cout<<"("<<e<<","<<c[e]<<"), ";
+    }
+    cout<<endl;
     // initialize heap of vertices 
     // node 0 has d(0) = 0
     // everyone else has d(j) = C,
@@ -277,9 +282,11 @@ void mst_prims(int n, int m, float C, const vector<int>& neighbors, const vector
         temp_dval = heap.top().d_i;
         heap.pop();
 
+        if (S[temp_index]) {continue;}
+
         start_index = indexes[temp_index];
         stop_index = indexes[temp_index+1];
-
+        
         for (int e = start_index; e < stop_index; ++e) {
             if (!S[neighbors[e]]) {
                 // if the neighbor is not already in S, push neighbor of node to heap with distance label c and set their pred
@@ -298,7 +305,9 @@ void mst_prims(int n, int m, float C, const vector<int>& neighbors, const vector
         }
         
         t_star->add_edge(min_edge_index);
+        cout<<"adding edge "<< temp_index << ", " << pred[temp_index] << " with cost " << c[min_edge_index] <<endl;
         t_star->set_objective(t_star->obj_val + min_edge_cost);
+        cout<<"obj now: "<<t_star->obj_val<<endl;
         S[temp_index] = true;
         // update the heap d_i values of each neighbor - !!!! we will re-add these neighbors 
         // since priority_queue has no decrease_key implementation, so we will have duplicates
@@ -309,26 +318,41 @@ void mst_prims(int n, int m, float C, const vector<int>& neighbors, const vector
 }
 
 vector<float> get_k_ratios(int m, const vector<int>& c, const vector<int>& tau){
-    // compute and sort ratios ce-cf/de-df for each pair of edges
-    // receive vector of edge costs (indexed e = 1-m) c and tau
-    //
+    /*
+     * compute and sort ratios ce-cf/de-df for each pair of edges
+     * receive vector of edge costs (indexed e = 1-m) c and tau
+     */
+    cout<<"computing k_ratios..."<<endl;
+    cout<<endl;
     vector<float> k_ratios;
     float k_ratio;
-    // TODO : check for duplicates and correct index at insertion
+    // something to add for speedup : check for duplicates and correct index at insertion
     for (int e = 0; e < m-1; ++e) {
         for (int f = e+1; f < m; ++f) {
             if (tau[e]-tau[f] == 0) {
                 continue;
             }
-            k_ratio = (c[e]-c[f])/(tau[e]-tau[f]);
+            cout<<"c_e: "<<c[e]<<", c_f: "<<c[f]<<", tau_e: "<<tau[e]<<", tau_f: "<<tau[f]<<endl;
+            k_ratio = (float)(c[e]-c[f])/(float)(tau[e]-tau[f]);
+            cout<<"computed k_ratio: "<<k_ratio<<endl;
             k_ratios.push_back(k_ratio);
         }
     }
-    set<int> s;
+    cout<<endl;
+    set<float> s;
     unsigned size = k_ratios.size();
     for( unsigned i = 0; i < size; ++i ) s.insert( k_ratios[i] );
     k_ratios.assign( s.begin(), s.end() );
     sort(k_ratios.begin(), k_ratios.end()); 
+
+    // we also need to account for the intervals -inf - k_0 and k_r - inf
+    // the optimal solution could be in that interval
+    int r = k_ratios.size();
+    float neg_inf_k = k_ratios[0] - ( (k_ratios[1] - k_ratios[0]) );
+    float pos_inf_k = k_ratios[r] + ( (k_ratios[r] - k_ratios[r-1]) );
+    k_ratios.insert(k_ratios.begin(), neg_inf_k);
+    k_ratios.push_back(pos_inf_k);
+
     return k_ratios;
 }
 
@@ -359,7 +383,7 @@ float eval_tree_nonparam(const vector<int>& c, const vector<int>& tau, MST* tree
         c_tot += c[edges[i]];
         tau_tot += tau[edges[i]];
     }
-    obj = c_tot / tau_tot;
+    obj = (float) c_tot / (float) tau_tot;
     return obj;
 }
 
@@ -378,13 +402,27 @@ float min_ratio_st(int n, int m, float C, const vector<int>& c_raw, const vector
     
     float A_val;
     float B_val;
+    for (int e = 0; e < m; ++e) {
+        cout<<"craw_e: "<< c_raw[e] << ", tauraw_e: "<< tau_raw[e]<<endl;
+    }
     vector<float> k_vals = get_k_ratios(m, c_raw, tau_raw); 
+    cout<<endl;
+    cout<<"k_ratios: ";
+    for (int i = 0; i < k_vals.size(); ++i) {
+        cout<<k_vals[i]<<" ";
+    }
+    cout<<endl;    
+    cout<<endl;    
     int r = k_vals.size();
     int alpha_t = 0;
     int beta_t = r;
     int j_index = 0;
     vector<float> h;
-    h.reserve(c.size());
+    float H = -10000000;
+
+    for (int e = 0; e < c.size(); ++e) {
+        h.push_back(0);
+    }
 
     // log k_ratios
     // cout<< "k ratios: " << endl;
@@ -398,18 +436,63 @@ float min_ratio_st(int n, int m, float C, const vector<int>& c_raw, const vector
         // set j index and k_t 
         j_index = floor((alpha_t+beta_t)/2);
         k_t = (k_vals[j_index]+k_vals[j_index+1])/2;
+        cout<<endl;
+        cout<<"j_index: "<<j_index<<", k_t: "<<k_t<<endl;
+        cout<<endl;
 
         // set the h_vector
         for (int e = 0; e < c.size(); ++e) {
             h[e] = c[e] - k_t * tau[e];
+            if (h[e] > H) {
+                H = h[e];
+            }
+            cout<<"h_cost, edge "<<e<<",  "<<h[e]<<endl;
         }
+        cout<<endl;
 
         // resolve the tree object on this h function
-        mst_prims(n, m, C, neighbors, indexes, h, tree);
+        mst_prims(n, m, H, neighbors, indexes, h, tree);
 
-        // calculate A_val and B_val to update everything
+        // calculate A_val and B_val to check optimalit/update 
+        A_val = eval_tree(k_vals[j_index], c, tau, tree);
+        B_val = eval_tree(k_vals[j_index+1], c, tau, tree);
+        cout<<endl;
+        cout<<"A_val: "<<A_val<<endl;
+        cout<<"B_val: "<<B_val<<endl;
+        cout<<endl;
 
+        obj_val = eval_tree_nonparam(c, tau, tree);
+        cout<<"obj val: "<<obj_val<<endl;
+        cout<<endl;
+        cout<<"tree edges (0-2m indexed): ";
+        for (int i = 0; i<n-1; ++i) {
+            cout<<tree->edges[i]<<", ";
+        }
+        cout<<endl;
         optimal = true;
+        
+        // optimality conditions/updates
+        // if A or B == 0
+        // if A, B < 0
+        // if (A_val < 0 && B_val < 0) {
+        //     // alpha stays the same, beta takes value of j
+        //     alpha_t = alpha_t;
+        //     beta_t = j_index;
+        // }
+        // // if A, B > 0
+        // else if (A_val > 0 && B_val > 0) {
+        //     // beta stays the same, alpha takes value of j+1
+        //     alpha_t = j_index+1;
+        //     beta_t = beta_t;
+        // }
+        // // if A > 0, B < 0, or A < 0, B > 0 or either of these values are 0 (optimal)
+        // else {
+        //     optimal = true;
+        // }
+        // ++t;
+        // if (t > 5) {
+        //     optimal = true;
+        // }
     }
 
     return obj_val;
@@ -423,7 +506,11 @@ int main(int argc, char* argv[]) {
     // V = {0, 1, 2}
     // E = {(0, 1), (0, 2), (1, 2)}
     // c = tau = 1
-    // when you have args uncomment and use the next two lines const std::string datafile = argv[1]; const std::string outputfile = argv[2]; to hard code the datafiles const std::string datafile = "example.graph";
+    // when you have args uncomment and use the next two lines 
+    // const std::string datafile = argv[1]; 
+    // const std::string outputfile = argv[2]; 
+    // to hard code the datafiles 
+    const std::string datafile = "example.graph";
     const std::string outputfile = "output.txt";
     
     // initialize file objects
@@ -527,6 +614,7 @@ int main(int argc, char* argv[]) {
     int start_index;
     int stop_index;
     for (int i = 0; i < n; ++i) {
+        cout<<endl;    
         cout<<std::to_string(vertices[i].i)<<": neighbors (index, c, tau) - "<<endl; 
         start_index = indexes[i];
         stop_index = indexes[i+1];
@@ -550,14 +638,14 @@ int main(int argc, char* argv[]) {
     MST* t_star = new MST();
     
 
-    float obj_val = min_ratio_st(n, m, final_c_raw, final_tau_raw, final_raw_indexes, final_neighbors, final_c,  final_tau, final_indexes);
+    float obj_val = min_ratio_st(n, m, C, final_c_raw, final_tau_raw, final_raw_indexes, final_neighbors, final_c,  final_tau, final_indexes, t_star);
+    cout<<endl;
+    cout<<"Terminated MRST with obj: "<<obj_val<<endl;
     // mst_prims(n, m, C, final_neighbors, final_indexes, final_c, t_star);
     //cout<<"prims obj: "<<t_star->obj_val<<endl;
     //for (int i = 0; i < n-1; ++i) {
     //    cout<<t_star->edges[i]<<endl;
     //}
-
-
 
     float run_time = float(clock() - time_0) / CLOCKS_PER_SEC;
 
